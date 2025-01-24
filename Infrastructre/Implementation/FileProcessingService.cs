@@ -7,45 +7,42 @@ public class FileProcessingService : IFileProcessingService
 {
     public Task<FileAnalysis> AnalyzePdfFileAsync(Stream pdfStream, string fileName, List<string> keywords)
     {
-        return Task.Run(() =>
+        var keywordCounts = keywords.ToDictionary(k => k, k => 0);
+        string title = null, author = null;
+        int pageCount = 0;
+
+        using (var pdfReader = new PdfReader(pdfStream))
+        using (var pdfDocument = new PdfDocument(pdfReader))
         {
-            var keywordCounts = keywords.ToDictionary(k => k, k => 0);
-            string title , author ;
-            int pageCount = 0;
+            pageCount = pdfDocument.GetNumberOfPages();
 
-            using (var pdfReader = new PdfReader(pdfStream))
-            using (var pdfDocument = new PdfDocument(pdfReader))
+            var info = pdfDocument.GetDocumentInfo();
+            title = info.GetTitle();
+            author = info.GetAuthor();
+
+            for (int i = 1; i <= pageCount; i++)
             {
-                pageCount = pdfDocument.GetNumberOfPages();
+                var page = pdfDocument.GetPage(i);
+                var text = PdfTextExtractor.GetTextFromPage(page);
 
-                var info = pdfDocument.GetDocumentInfo();
-                title = info.GetTitle();
-                author = info.GetAuthor();
-
-                for (int i = 1; i <= pageCount; i++)
+                foreach (var keyword in keywords)
                 {
-                    var page = pdfDocument.GetPage(i);
-                    var text = PdfTextExtractor.GetTextFromPage(page);
-
-                    foreach (var keyword in keywords)
-                    {
-                        keywordCounts[keyword] += CountOccurrences(text, keyword);
-                    }
+                    keywordCounts[keyword] += CountOccurrences(text, keyword);
                 }
             }
+        }
 
-            return new FileAnalysis
+        return new FileAnalysis
+        {
+            FileName = fileName,
+            Metadata = new FileMetadata
             {
-                FileName = fileName,
-                Metadata = new FileMetadata
-                {
-                    Title = title ?? "Unknown",
-                    Author = author ?? "Unknown",
-                    PageCount = pageCount
-                },
-                KeywordCounts = keywordCounts
-            };
-        });
+                Title = title ?? "Unknown",
+                Author = author ?? "Unknown",
+                PageCount = pageCount
+            },
+            KeywordCounts = keywordCounts
+        };
     }
 
     public int CountOccurrences(string text, string keyword)
@@ -53,6 +50,5 @@ public class FileProcessingService : IFileProcessingService
         return text.Split(new[] { keyword }, StringSplitOptions.None).Length - 1;
     }
 }
-
 
 
