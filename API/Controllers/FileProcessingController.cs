@@ -20,48 +20,13 @@ public class PdfAnalyzerController(IZipFileProcessingService zipFileProcessingSe
     [HttpPost]
     public async Task<IActionResult> AnalyzePdf([FromForm] AnalyzeZipRequest request)
     {
-        // Validate the request
-        if (request.ZipFile == null || request.ZipFile.Length == 0)
+        if (!request.ZipFile.ContentType.Equals("application/zip", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new ApiResponse(400, "ZIP file is required."));
+            return BadRequest(new ApiResponse(400, "The uploaded file must be a ZIP file."));
         }
-
-        if (request.Keywords == null || request.Keywords.Count == 0)
-        {
-            return BadRequest(new ApiResponse(400, "Keywords are required. Please provide a valid list of keywords."));
-        }
-
         try
         {
             var result = await _zipFileProcessingService.AnalyzeZipFileAsync(request);
-
-            // Rebuild keyword counts for each file correctly
-            foreach (var file in result.Files)
-            {
-                var formattedKeywordCounts = new Dictionary<string, int>();
-
-                foreach (var keyword in request.Keywords)
-                {
-                    // Count occurrences of each keyword in the file
-                    formattedKeywordCounts[keyword] = file.KeywordCounts.ContainsKey(keyword)
-                        ? file.KeywordCounts[keyword]
-                        : 0;
-                }
-
-                file.KeywordCounts = formattedKeywordCounts;
-            }
-
-            // Rebuild total keyword counts correctly
-            var formattedTotalKeywordCounts = new Dictionary<string, int>();
-            foreach (var keyword in request.Keywords)
-            {
-                // Count total occurrences of each keyword across all files
-                formattedTotalKeywordCounts[keyword] = result.TotalKeywordCounts.ContainsKey(keyword)
-                    ? result.TotalKeywordCounts[keyword]
-                    : 0;
-            }
-
-            result.TotalKeywordCounts = formattedTotalKeywordCounts;
 
             return Ok(result);
         }
