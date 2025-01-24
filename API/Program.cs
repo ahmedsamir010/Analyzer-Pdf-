@@ -16,18 +16,16 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddApplicationService();
 var app = builder.Build();
-app.UseCors(c => c.WithOrigins("http://localhost:4200", "https://fana-dusky.vercel.app")
+app.UseCors(c => c.WithOrigins("http://localhost:4200")
     .AllowAnyHeader()
     .AllowAnyMethod()
     .AllowCredentials()
     .WithExposedHeaders("*"));
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseStaticFiles();
