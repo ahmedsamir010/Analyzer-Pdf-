@@ -20,10 +20,11 @@ public class PdfAnalyzerController(IZipFileProcessingService zipFileProcessingSe
     [HttpPost]
     public async Task<IActionResult> AnalyzePdf([FromForm] AnalyzeZipRequest request)
     {
-        if (!request.ZipFile.ContentType.Equals("application/zip", StringComparison.OrdinalIgnoreCase))
+        if (!Path.GetExtension(request.ZipFile.FileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new ApiResponse(400, "The uploaded file must be a ZIP file."));
+            return BadRequest(new ApiResponse(400, "The uploaded file must be a ZIP archive."));
         }
+
         try
         {
             var result = await _zipFileProcessingService.AnalyzeZipFileAsync(request);
