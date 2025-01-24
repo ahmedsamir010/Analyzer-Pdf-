@@ -1,48 +1,59 @@
 ﻿using Application.Interfaces;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
+using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using static Shared.Dtos.KeywordAnalyzer;
+
 namespace Infrastructre.Implementation;
 public class FileProcessingService : IFileProcessingService
 {
     public Task<FileAnalysis> AnalyzePdfFileAsync(Stream pdfStream, string fileName, List<string> keywords)
     {
-        var keywordCounts = keywords.ToDictionary(k => k, k => 0);
-        string title = null, author = null;
-        int pageCount = 0;
-
-        using (var pdfReader = new PdfReader(pdfStream))
-        using (var pdfDocument = new PdfDocument(pdfReader))
+        return Task.Run(() =>
         {
-            pageCount = pdfDocument.GetNumberOfPages();
+            var keywordCounts = keywords.ToDictionary(k => k, k => 0);
+            string title;
+            string author;
+            int pageCount = 0;
 
-            var info = pdfDocument.GetDocumentInfo();
-            title = info.GetTitle();
-            author = info.GetAuthor();
-
-            for (int i = 1; i <= pageCount; i++)
+            using (var pdfReader = new PdfReader(pdfStream))
+            using (var pdfDocument = new PdfDocument(pdfReader))
             {
-                var page = pdfDocument.GetPage(i);
-                var text = PdfTextExtractor.GetTextFromPage(page);
+                pageCount = pdfDocument.GetNumberOfPages();
 
-                foreach (var keyword in keywords)
+                var info = pdfDocument.GetDocumentInfo();
+                title = info.GetTitle();
+                author = info.GetAuthor();
+
+                for (int i = 1; i <= pageCount; i++)
                 {
-                    keywordCounts[keyword] += CountOccurrences(text, keyword);
+                    var page = pdfDocument.GetPage(i);
+                    var text = PdfTextExtractor.GetTextFromPage(page);
+
+                    foreach (var keyword in keywords)
+                    {
+                        keywordCounts[keyword] += CountOccurrences(text, keyword);
+                    }
                 }
             }
-        }
 
-        return new FileAnalysis
-        {
-            FileName = fileName,
-            Metadata = new FileMetadata
+            return new FileAnalysis
             {
-                Title = title ?? "Unknown",
-                Author = author ?? "Unknown",
-                PageCount = pageCount
-            },
-            KeywordCounts = keywordCounts
-        };
+                FileName = fileName,
+                Metadata = new FileMetadata
+                {
+                    Title = title ?? "Unknown", 
+                    Author = author ?? "Unknown", 
+                    PageCount = pageCount
+                },
+                KeywordCounts = keywordCounts
+            };
+        });
     }
 
     public int CountOccurrences(string text, string keyword)
